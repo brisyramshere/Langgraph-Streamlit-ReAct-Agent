@@ -120,7 +120,7 @@ class AgentWorkflow:
         # MemorySaver是简单的内存检查点，适用于开发和测试。
         return graph_builder.compile(checkpointer=MemorySaver())
     
-    async def _call_model(self, state: AgentState):
+    def _call_model(self, state: AgentState):
         """
         核心Agent节点：调用LLM，并处理动态提示词的注入。
         """
@@ -142,7 +142,7 @@ class AgentWorkflow:
 
         try:
             # 调用绑定了工具的LLM
-            response = cast(AIMessage, await self.llm_with_tools.ainvoke(current_messages))
+            response = cast(AIMessage, self.llm_with_tools.invoke(current_messages))
             finish_reason = response.response_metadata.get("finish_reason", "unknown")
         except Exception as e:
             print(f">>> LLM调用异常: {e}")

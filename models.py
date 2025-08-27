@@ -18,7 +18,7 @@ def get_agent_model(model_config: dict):
             temperature=model_config.get("temperature", 0.1),
             api_key=model_config.get("api_key"),
             base_url=model_config.get("base_url"),
-            streaming=True,
+            streaming=False,
         )
     else:
         raise ValueError(f"不支持的LLM供应商: {provider}")
@@ -29,5 +29,5 @@ def get_subagent_model():
             temperature=0.1,
             api_key=os.getenv("OPENAI_API_KEY"),
             base_url=os.getenv("OPENAI_API_BASE"),
-            streaming=True,
+            streaming=False,
         )

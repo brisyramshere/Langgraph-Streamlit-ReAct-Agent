@@ -25,9 +25,9 @@ class ConfigManager:
         #   "thinking": (可选) 一个自定义字段，用于标记该模型是否支持特殊的"思考"或"推理"模式。
         #               您可以在 agent_workflow.py 中读取这个值来执行不同的逻辑。
         self.model_configs = {
-            "Qwen3-Coder-480B": {
+            "qwen3-coder-30b-a3b-instruct": {
                 "provider": "openai",
-                "display_name": "Qwen3-Coder",
+                "display_name": "Qwen3-Coder30B",
                 "api_key": os.getenv("OPENAI_API_KEY"),  # 从环境变量读取
                 "base_url": os.getenv("OPENAI_API_BASE"),
             },

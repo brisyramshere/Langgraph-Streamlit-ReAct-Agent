@@ -1,6 +1,6 @@
 from langchain_core.tools import tool
 from pydantic import BaseModel, Field
-from ..models import get_subagent_model
+from models import get_subagent_model
 
 # --- Sub-Agent Executor Tool ---
 # "Sub-Agent" (子Agent) 是一种强大的模式，它允许一个主Agent将一个复杂的、
@@ -42,20 +42,3 @@ def sub_agent_executor_tool(sub_task_description: str) -> str:
     
     print(f"Sub-Agent返回结果: {result}")
     return result
-
-
-# --- 使用示例 ---
-if __name__ == '__main__':
-    # 这是一个简单的测试，展示如何直接调用该工具。
-    task = "请帮我分析一下最近的苹果公司财报，并总结关键亮点。"
-    print(f"主Agent准备委派任务: '{task}'")
-    
-    try:
-        # 直接调用工具函数
-        output = sub_agent_executor_tool.invoke({"sub_task_description": task})
-        
-        print("\n工具返回给主Agent的结果:")
-        print(output)
-        
-    except Exception as e:
-        print(f"\n调用Sub-Agent工具时出错: {e}")

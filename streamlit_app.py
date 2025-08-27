@@ -2,9 +2,6 @@ import streamlit as st
 import uuid
 import json
 import time
-import asyncio
-import nest_asyncio
-import platform
 from pathlib import Path
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from dotenv import load_dotenv
@@ -12,17 +9,6 @@ from dotenv import load_dotenv
 # --- 核心Agent组件 ---
 from graph import create_agent_workflow
 from configs import ConfigManager
-
-# --- Asyncio Configuration ---
-nest_asyncio.apply()
-if platform.system() == "Windows":
-    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-
-try:
-    loop = asyncio.get_running_loop()
-except RuntimeError:
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
 
 # --- 加载环境变量 ---
 load_dotenv()
@@ -75,56 +61,60 @@ def render_message_history():
     """【非流式】渲染完整的消息历史。"""
     for msg in st.session_state.messages:
         if isinstance(msg, HumanMessage):
-            with st.chat_message("user", avatar="🧑"):
+            with st.chat_message("user"):
                 st.markdown(msg.content)
 
         elif isinstance(msg, AIMessage):
-            with st.chat_message("assistant", avatar="🐦"):
+            with st.chat_message("assistant"):
                 if msg.content:
                     st.markdown(msg.content)
                 if msg.tool_calls:
                     for tc in msg.tool_calls:
                         render_tool_call(tc)
         elif isinstance(msg, ToolMessage):
-            with st.chat_message("assistant", avatar="🐦"):
+            with st.chat_message("assistant"):
                  render_tool_message(msg)
 
-async def stream_agent_response(agent_input, config):
-    """【流式】处理Agent的实时响应，并更新UI。"""
-    async for event in st.session_state.agent_runnable.astream(agent_input, config=config, stream_mode = "messages"):
-        # for node_name, node_output in event.items():
-        if "messages" not in event:
-            continue
-        print(event["messages"])
-        for msg in event["messages"]:
+def process_agent_response(agent_input, config):
+    """处理Agent的响应并更新UI。"""
+    # 使用同步调用获取完整响应
+    # response = st.session_state.agent_runnable.stream(agent_input, config=config, stream_mode = "messages")
+    response = st.session_state.agent_runnable.invoke(agent_input, config=config)
+    # LangGraph返回的是AgentState对象，直接访问'messages'字段
+    if "messages" in response:
+        # 获取新增加的消息（排除用户的原始输入）
+        existing_msg_count = len(st.session_state.messages)
+        new_messages = response["messages"][existing_msg_count:]
+        
+        for msg in new_messages:
             if isinstance(msg, AIMessage):
                 # 思考过程处理
                 reasoning = msg.additional_kwargs.get("reasoning") or msg.additional_kwargs.get("reasoning_content")
                 if reasoning:
-                    with st.chat_message("assistant", avatar = "🐦"):
+                    with st.chat_message("assistant"):
                         st.markdown("#### 🤔 思考过程")
                         if isinstance(reasoning, (dict, list)):
                             st.json(reasoning)
                         else:
                             st.code(str(reasoning), language='text')
 
-                # 正常答复 (实时流式更新)
+                # 正常答复
                 if msg.content:
-                    with st.chat_message("assistant", avatar = "🐦"):
-                        st.markdown(msg.content,unsafe_allow_html=True)
+                    with st.chat_message("assistant"):
+                        st.markdown(msg.content, unsafe_allow_html=True)
 
-                #工具调用 (在主聊天流中渲染)
+                # 工具调用
                 if msg.tool_calls:
                     for tc in msg.tool_calls:
                         with st.chat_message("assistant"):
-                            render_tool_call(tc) # 使用修复后的函数
+                            render_tool_call(tc)
 
-            #工具消息返回 (在主聊天流中渲染)
-            if isinstance(msg, ToolMessage):
-                with st.chat_message("assistant", avatar = "🐦"):
-                    render_tool_message(msg) # 假设此函数也已正确实现或无需修改
+            # 工具消息返回
+            elif isinstance(msg, ToolMessage):
+                with st.chat_message("assistant"):
+                    render_tool_message(msg)
 
-            # 将消息添加到st的消息管理中
+            # 将消息添加到session state中
             if msg not in st.session_state.messages:
                 st.session_state.messages.append(msg)
 
@@ -198,7 +188,7 @@ render_message_history()
 # 接收用户的新输入
 if prompt := st.chat_input("请输入您的问题..."):
     st.session_state.messages.append(HumanMessage(content=prompt))
-    with st.chat_message("user", avatar="🧑"):
+    with st.chat_message("user"):
         st.markdown(prompt)
 
     agent_input = {
@@ -207,5 +197,5 @@ if prompt := st.chat_input("请输入您的问题..."):
     }
     config = {"configurable": {"thread_id": st.session_state.session_id}}
     
-    # 使用同步方式调用异步函数
-    asyncio.run(stream_agent_response(agent_input, config))
+    # 使用同步方式处理Agent响应
+    process_agent_response(agent_input, config)

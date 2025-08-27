@@ -5,4 +5,3 @@ langchain-community
 langchain-tavily
 streamlit
 python-dotenv
-nest_asyncio
